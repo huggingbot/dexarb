@@ -1,0 +1,32 @@
+{
+  "name": "hardhat-project",
+  "scripts": {
+    "lint:solidity": "solhint 'contracts/**/*.sol'",
+    "lint:solidity:fix": "solhint 'contracts/**/*.sol' --fix",
+    "lint": "eslint --ignore-path .gitignore --ext .js,.ts .",
+    "lint:fix": "eslint --fix --ignore-path .gitignore --ext .js,.ts ."
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^1.0.2",
+    "@openzeppelin/contracts": "^4.7.2",
+    "@typescript-eslint/eslint-plugin": "^5.30.7",
+    "@typescript-eslint/parser": "^5.30.7",
+    "dotenv": "^16.0.1",
+    "eslint": "^8.20.0",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-config-standard": "^17.0.0",
+    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-prettier": "^4.2.1",
+    "eslint-plugin-promise": "^6.0.0",
+    "hardhat": "^2.10.1",
+    "prettier": "^2.7.1"
+  },
+  "dependencies": {
+    "winston": "^3.8.1",
+    "winston-daily-rotate-file": "^4.7.1"
+  },
+  "engines": {
+    "node": ">=12.22.8"
+  }
+}
