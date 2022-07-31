@@ -1,15 +1,16 @@
 import { BigNumber } from 'ethers'
 import fs from 'fs'
 import { ethers, network } from 'hardhat'
-import { LOG_RESULTS_INTERVAL_MS } from '../constants'
+import { ON_ERROR_SLEEP_MS } from '../constants'
 import logger from '../core/logging'
 import { auroraMainnetArbContract, ftmMainnetArbContract } from '../hardhat.config'
 import { Arb } from '../typechain-types'
 import { Address } from '../types/common'
 import { DualRoute, IBalance, IConfig, INetwork } from '../types/config'
 
-const config: IConfig = await (async (): Promise<IConfig> | never => {
-  const networkName = network.name as INetwork
+let config: IConfig
+
+const getConfig = async (networkName: INetwork): Promise<IConfig> | never => {
   let partial: Omit<IConfig, 'arbContract'>
   let config: IConfig
 
@@ -29,7 +30,7 @@ const config: IConfig = await (async (): Promise<IConfig> | never => {
   }
   logger.info(`Loaded ${config.routes.length} routes`)
   return config
-})()
+}
 
 const balances: Record<Address, IBalance> = {}
 
@@ -66,23 +67,27 @@ const dualTrade = async (arb: Arb, route: DualRoute, amount: BigNumber) => {
     const signer = await getSigner(0)
     const tx = await arb.connect(signer).dualDexTrade(router1, router2, token1, token2, amount)
     await tx.wait()
+
+    await updateResults()
+    logResults()
   } catch (e) {
-    logger.error(e)
+    throw e
   }
 }
 
-const lookForDualTrade = async (arb: Arb): Promise<void> => {
+const lookForDualTrade = async (arb: Arb): Promise<void> | never => {
   const targetRoute: DualRoute = config.routes.length > 0 ? useGoodRoutes() : searchForRoutes()
   const { router1, router2, token1, token2 } = targetRoute
 
   try {
     let tradeSize: BigNumber | undefined = balances[token1]?.balance
     if (!tradeSize) {
-      logger.error(`Token ${token1} not found in ${Object.keys(balances)}`)
-      return
+      const err = `Token ${token1} not found in ${Object.keys(balances)}`
+      logger.error(err)
+      throw new Error(err)
     }
 
-    logger.info(`["${router1}","${router2}","${token1}","${token2}"]`)
+    logger.info(`['${router1}','${router2}','${token1}','${token2}']`)
 
     const amtBack = await arb.estimateDualDexTrade(router1, router2, token1, token2, tradeSize)
     const multiplier = BigNumber.from(config.minBasisPointsPerTrade + 10000)
@@ -93,26 +98,39 @@ const lookForDualTrade = async (arb: Arb): Promise<void> => {
     }
   } catch (e) {
     logger.error(e)
+    await new Promise((r) => setTimeout(r, ON_ERROR_SLEEP_MS))
   }
 }
 
-const updateAndLogResults = async (): Promise<void> => {
-  logger.info(`############# LOGS #############`)
+const updateResults = async (): Promise<void> => {
+  const initBalance = Object.keys(balances).length === 0
+
   for (let i = 0; i < config.baseAssets.length; i++) {
     const asset = config.baseAssets[i]
     const iERC20 = await ethers.getContractFactory('ERC20')
     const assetToken = iERC20.attach(asset.address)
     const balance = await assetToken.balanceOf(config.arbContract)
 
-    if (Object.keys(balances).length === 0) {
+    if (initBalance) {
       balances[asset.address] = { symbol: asset.symbol, balance, startBalance: balance }
-      logger.info(asset.symbol, balance.toString())
     } else {
       balances[asset.address].balance = balance
-      const diff = balances[asset.address].balance.sub(balances[asset.address].startBalance)
-      const basisPoints = diff.mul(10000).div(balances[asset.address].startBalance)
-      logger.info(`#  ${asset.symbol}: ${basisPoints.toString()}bps`)
     }
+  }
+}
+
+const logResults = (): void => {
+  logger.info(`############# LOGS #############`)
+
+  for (let i = 0; i < config.baseAssets.length; i++) {
+    const { symbol, address } = config.baseAssets[i]
+    const startBalance = balances[address].startBalance
+    const endBalance = balances[address].balance
+    const diff = endBalance.sub(startBalance)
+
+    const isZero = startBalance.toNumber() === 0
+    const basisPoints = isZero ? '0' : diff.mul(10000).div(startBalance).toString()
+    logger.info(`# ${symbol}: startBalance=${startBalance}, endBalance=${endBalance}, bps=${basisPoints}`)
   }
 }
 
@@ -125,14 +143,14 @@ const setup = async (): Promise<Arb> => {
   const signer = await getSigner(0)
   logger.info(`Signer: ${signer.address}`)
 
-  updateAndLogResults()
+  const networkName = network.name as INetwork
+  config = await getConfig(networkName)
 
-  setInterval(() => {
-    updateAndLogResults()
-  }, LOG_RESULTS_INTERVAL_MS)
+  await updateResults()
+  logResults()
 
   const iArb = await ethers.getContractFactory('Arb')
-  return iArb.attach(config.arbContract)
+  return iArb.attach(config.arbContract) as Arb
 }
 
 const main = async () => {

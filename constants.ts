@@ -1,1 +1,1 @@
-export const LOG_RESULTS_INTERVAL_MS = 600000
+export const ON_ERROR_SLEEP_MS = 60000
