@@ -2,12 +2,15 @@ import { BigNumber } from 'ethers'
 import { NetworkUserConfig } from 'hardhat/types'
 import { Address } from './common'
 
-export interface INetworkConfig {
-  aurora: NetworkUserConfig
-  fantom: NetworkUserConfig
+export type INetwork = 'aurora' | 'fantom'
+
+export type INetworkConfig = {
+  [key in INetwork]: NetworkUserConfig
 }
 
-export type INetwork = keyof INetworkConfig
+export type IApiKeyConfig = {
+  [key in INetwork]?: string
+}
 
 export interface IConfig {
   arbContract: Address
