@@ -8,31 +8,30 @@ import { Arb } from '../typechain-types'
 import { Address } from '../types/common'
 import { DualRoute, IBalance, IConfig, INetwork } from '../types/config'
 
+const balances: Record<Address, IBalance> = {}
 let config: IConfig
 
 const getConfig = async (networkName: INetwork): Promise<IConfig> | never => {
   let partial: Omit<IConfig, 'arbContract'>
-  let config: IConfig
+  let configs: IConfig
 
   switch (networkName) {
     case 'aurora':
       partial = (await import('../config/aurora.json')).default
-      config = { ...partial, arbContract: auroraMainnetArbContract }
+      configs = { ...partial, arbContract: auroraMainnetArbContract }
       break
     case 'fantom':
       partial = (await import('../config/fantom.json')).default
-      config = { ...partial, arbContract: ftmMainnetArbContract }
+      configs = { ...partial, arbContract: ftmMainnetArbContract }
       break
     default:
       const err = `No matching config file for network '${network.name}'`
       logger.error(err)
       throw new Error(err)
   }
-  logger.info(`Loaded ${config.routes.length} routes`)
-  return config
+  logger.info(`Loaded ${configs.routes.length} routes`)
+  return configs
 }
-
-const balances: Record<Address, IBalance> = {}
 
 const searchForRoutes = (): DualRoute => {
   const router1 = config.routers[Math.floor(Math.random() * config.routers.length)].address
@@ -102,6 +101,7 @@ const lookForDualTrade = async (arb: Arb): Promise<void> | never => {
   }
 }
 
+// Mutate `balances`
 const updateResults = async (): Promise<void> => {
   const initBalance = Object.keys(balances).length === 0
 
@@ -139,6 +139,7 @@ const getSigner = async <T extends number>(index: T): Promise<Awaited<ReturnType
   return signers[index]
 }
 
+// Mutate `config`
 const setup = async (): Promise<Arb> => {
   const signer = await getSigner(0)
   logger.info(`Signer: ${signer.address}`)
