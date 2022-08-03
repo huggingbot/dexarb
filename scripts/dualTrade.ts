@@ -1,15 +1,17 @@
 import { BigNumber } from 'ethers'
-import { ethers, network } from 'hardhat'
+import { network } from 'hardhat'
 import { ON_ERROR_SLEEP_MS } from '../constants'
 import logger from '../core/logging'
-import { auroraMainnetArbContract, ftmMainnetArbContract } from '../hardhat.config'
 import { Arb } from '../typechain-types'
 import { Address } from '../types/common'
 import { DualRoute, IBalance, IConfig, INetwork } from '../types/config'
-import { getSigner } from '../utils/ethers'
+import { getConfig, getRandomRoute, makeGoodRoute } from '../utils/config'
+import { getContract, getSigner } from '../utils/ethers'
 
 const balances: Record<Address, IBalance> = {}
 let config: IConfig
+
+const getGoodRoute = makeGoodRoute()
 
 const dualTrade = async (arb: Arb, route: DualRoute, amount: BigNumber) => {
   const { router1, router2, token1, token2 } = route
@@ -26,34 +28,8 @@ const dualTrade = async (arb: Arb, route: DualRoute, amount: BigNumber) => {
   }
 }
 
-const searchForRoutes = (): DualRoute => {
-  const router1 = config.routers[Math.floor(Math.random() * config.routers.length)].address
-  const router2 = config.routers[Math.floor(Math.random() * config.routers.length)].address
-  const token1 = config.baseAssets[Math.floor(Math.random() * config.baseAssets.length)].address
-  const token2 = config.tokens[Math.floor(Math.random() * config.tokens.length)].address
-  return { router1, router2, token1, token2 }
-}
-
-const useGoodRoutes = (): DualRoute => {
-  let goodCount = 0
-
-  return (() => {
-    const route = config.routes[goodCount]
-    goodCount++
-
-    if (goodCount >= config.routes.length) {
-      goodCount = 0
-    }
-    const router1 = route[0]
-    const router2 = route[1]
-    const token1 = route[2]
-    const token2 = route[3]
-    return { router1, router2, token1, token2 }
-  })()
-}
-
 const lookForDualTrade = async (arb: Arb): Promise<void> | never => {
-  const targetRoute: DualRoute = config.routes.length > 0 ? useGoodRoutes() : searchForRoutes()
+  const targetRoute: DualRoute = config.routes.length > 0 ? getGoodRoute(config) : getRandomRoute(config)
   const { router1, router2, token1, token2 } = targetRoute
 
   try {
@@ -100,8 +76,7 @@ const updateResults = async (): Promise<void> => {
 
   for (let i = 0; i < config.baseAssets.length; i++) {
     const asset = config.baseAssets[i]
-    const iERC20 = await ethers.getContractFactory('ERC20')
-    const assetToken = iERC20.attach(asset.address)
+    const assetToken = await getContract('ERC20', asset.address)
     const balance = await assetToken.balanceOf(config.arbContract)
 
     if (initBalance) {
@@ -110,28 +85,6 @@ const updateResults = async (): Promise<void> => {
       balances[asset.address].balance = balance
     }
   }
-}
-
-const getConfig = async (networkName: INetwork): Promise<IConfig> | never => {
-  let partial: Omit<IConfig, 'arbContract'>
-  let configs: IConfig
-
-  switch (networkName) {
-    case 'aurora':
-      partial = (await import('../config/aurora.json')).default
-      configs = { ...partial, arbContract: auroraMainnetArbContract }
-      break
-    case 'fantom':
-      partial = (await import('../config/fantom.json')).default
-      configs = { ...partial, arbContract: ftmMainnetArbContract }
-      break
-    default:
-      const err = `No matching config file for network '${network.name}'`
-      logger.error(err)
-      throw new Error(err)
-  }
-  logger.info(`Loaded ${configs.routes.length} routes`)
-  return configs
 }
 
 // Mutate `config`
@@ -145,8 +98,7 @@ const setup = async (): Promise<Arb> => {
   await updateResults()
   logResults()
 
-  const iArb = await ethers.getContractFactory('Arb')
-  return iArb.attach(config.arbContract) as Arb
+  return (await getContract('Arb', config.arbContract)) as Arb
 }
 
 const main = async () => {
