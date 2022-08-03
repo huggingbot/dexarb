@@ -17,7 +17,7 @@ export const getContract = async <T extends Address | undefined = undefined>(
   address?: Address | T
 ): Promise<T extends Address ? Contract : ContractFactory> | never => {
   const contractNames = fs
-    .readdirSync(path.join(BASE_DIR, 'config'))
+    .readdirSync(path.join(BASE_DIR, 'contracts'))
     .map((file) => file.substring(0, file.lastIndexOf('.')) || file)
 
   if (!contractNames.includes(contractName)) {

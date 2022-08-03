@@ -89,16 +89,21 @@ const updateResults = async (): Promise<void> => {
 
 // Mutate `config`
 const setup = async (): Promise<Arb> => {
-  const signer = await getSigner(0)
-  logger.info(`Signer: ${signer.address}`)
+  try {
+    const signer = await getSigner(0)
+    logger.info(`Signer: ${signer.address}`)
 
-  const networkName = network.name as INetwork
-  config = await getConfig(networkName)
+    const networkName = network.name as INetwork
+    config = await getConfig(networkName)
 
-  await updateResults()
-  logResults()
+    await updateResults()
+    logResults()
 
-  return (await getContract('Arb', config.arbContract)) as Arb
+    return (await getContract('Arb', config.arbContract)) as Arb
+  } catch (e) {
+    logger.error(e)
+    throw e
+  }
 }
 
 const main = async () => {
