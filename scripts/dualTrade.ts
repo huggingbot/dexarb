@@ -34,12 +34,14 @@ const lookForDualTrade = async (arb: Arb): Promise<void> | never => {
 
   try {
     let tradeSize: BigNumber | undefined = balances[token1]?.balance
-    if (!tradeSize) {
+    if (typeof tradeSize === 'undefined') {
       const err = `Token ${token1} not found in ${Object.keys(balances)}`
-      logger.error(err)
       throw new Error(err)
     }
-
+    if (tradeSize.toNumber() === 0) {
+      const err = `Token ${token1} balance is 0`
+      throw new Error(err)
+    }
     logger.info(`['${router1}','${router2}','${token1}','${token2}']`)
 
     const amtBack = await arb.estimateDualDexTrade(router1, router2, token1, token2, tradeSize)
