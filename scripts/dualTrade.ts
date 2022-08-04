@@ -1,3 +1,4 @@
+import { strict as assert } from 'assert'
 import { BigNumber } from 'ethers'
 import { network } from 'hardhat'
 import { ON_ERROR_SLEEP_MS } from '../constants'
@@ -14,8 +15,9 @@ let config: IConfig
 const getGoodRoute = makeGoodRoute()
 
 const dualTrade = async (arb: Arb, route: DualRoute, amount: BigNumber) => {
-  const { router1, router2, token1, token2 } = route
   try {
+    const { router1, router2, token1, token2 } = route
+
     logger.info('> Making dualTrade...')
     const signer = await getSigner(0)
     const tx = await arb.connect(signer).dualDexTrade(router1, router2, token1, token2, amount)
@@ -62,10 +64,12 @@ const logResults = (): void => {
 
   for (let i = 0; i < config.baseAssets.length; i++) {
     const { symbol, address } = config.baseAssets[i]
-    const startBalance = balances[address].startBalance
-    const endBalance = balances[address].balance
-    const diff = endBalance.sub(startBalance)
+    const startBalance = balances[address]?.startBalance
+    const endBalance = balances[address]?.balance
+    assert(typeof startBalance !== 'undefined', `'startBalance' is undefined using index of ${address} on ${balances}`)
+    assert(typeof endBalance !== 'undefined', `'endBalance' is undefined using index of ${address} on ${balances}`)
 
+    const diff = endBalance.sub(startBalance)
     const isZero = startBalance.toNumber() === 0
     const basisPoints = isZero ? '0' : diff.mul(10000).div(startBalance).toString()
     logger.info(`# ${symbol}: startBalance=${startBalance}, endBalance=${endBalance}, bps=${basisPoints}`)
@@ -74,18 +78,22 @@ const logResults = (): void => {
 
 // Mutate `balances`
 const updateResults = async (): Promise<void> => {
-  const initBalance = Object.keys(balances).length === 0
+  try {
+    const initBalance = Object.keys(balances).length === 0
 
-  for (let i = 0; i < config.baseAssets.length; i++) {
-    const asset = config.baseAssets[i]
-    const assetToken = await getContract('ERC20', asset.address)
-    const balance = await assetToken.balanceOf(config.arbContract)
+    for (let i = 0; i < config.baseAssets.length; i++) {
+      const asset = config.baseAssets[i]
+      const assetToken = await getContract('ERC20', asset.address)
+      const balance = await assetToken.balanceOf(config.arbContract)
 
-    if (initBalance) {
-      balances[asset.address] = { symbol: asset.symbol, balance, startBalance: balance }
-    } else {
-      balances[asset.address].balance = balance
+      if (initBalance) {
+        balances[asset.address] = { symbol: asset.symbol, balance, startBalance: balance }
+      } else {
+        balances[asset.address].balance = balance
+      }
     }
+  } catch (e) {
+    throw e
   }
 }
 
