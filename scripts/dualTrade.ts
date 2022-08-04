@@ -29,10 +29,10 @@ const dualTrade = async (arb: Arb, route: DualRoute, amount: BigNumber) => {
 }
 
 const lookForDualTrade = async (arb: Arb): Promise<void> | never => {
-  const targetRoute: DualRoute = config.routes.length > 0 ? getGoodRoute(config) : getRandomRoute(config)
-  const { router1, router2, token1, token2 } = targetRoute
-
   try {
+    const targetRoute: DualRoute = config.routes.length > 0 ? getGoodRoute(config) : getRandomRoute(config)
+    const { router1, router2, token1, token2 } = targetRoute
+
     let tradeSize: BigNumber | undefined = balances[token1]?.balance
     if (typeof tradeSize === 'undefined') {
       const err = `Token ${token1} not found in ${Object.keys(balances)}`
