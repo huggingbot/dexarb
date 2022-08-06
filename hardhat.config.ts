@@ -5,6 +5,8 @@ import { IApiKeyConfig, INetworkConfig } from './types/config'
 
 dotenv.config()
 
+export const etherscanApiKey = process.env.ETHERSCAN_API_KEY ?? ''
+
 const auroraMainnetUrl = process.env.AURORA_MAINNET_URL
 const auroraMainnetPrivateKey = process.env.AURORA_MAINNET_PRIVATE_KEY
 export const auroraMainnetArbContract = process.env.AURORA_MAINNET_ARB_CONTRACT ?? ''
