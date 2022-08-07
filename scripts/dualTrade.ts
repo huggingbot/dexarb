@@ -67,7 +67,6 @@ const lookForDualTrade = async (arb: Arb): Promise<void> | never => {
       logger.warn(err)
       return
     }
-
     const amtBack = await arb.estimateDualDexTrade(router1, router2, token1, token2, tradeSize)
     const multiplier = BigNumber.from(config.minBasisPointsPerTrade + 10000)
     const profitTarget = tradeSize.mul(multiplier).div(BigNumber.from(10000))
