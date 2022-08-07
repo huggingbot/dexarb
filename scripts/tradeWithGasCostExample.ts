@@ -36,12 +36,12 @@ const main = async () => {
     console.log('Gas cost in ether', `${gasCostInEther} ether == ${estimatedGas} gas * ${gasPriceInGwei} gwei`)
 
     const etherPriceUsd = await getEtherPrice()
-    const etherCostInUsd = Number(gasCostInEther) * etherPriceUsd
+    const gasCostInUsd = Number(gasCostInEther) * etherPriceUsd
 
-    console.log(`Ether cost in USD: ${etherCostInUsd} USD == ${gasCostInEther} ether * ${etherPriceUsd} USD`)
+    console.log(`Gas cost in USD: ${gasCostInUsd} USD == ${gasCostInEther} ether * ${etherPriceUsd} USD`)
 
     const isWeth = getBaseAssetSymbol(config, token1) === 'weth'
-    const costToAdd = isWeth ? Number(gasCostInEther) : etherCostInUsd
+    const costToAdd = isWeth ? Number(gasCostInEther) : gasCostInUsd
 
     if (amtBack.gt(profitTarget.add(costToAdd * 10 ** decimals))) {
       const tx = await arb.connect(signer).dualDexTrade(router1, router2, token1, token2, tradeSize)

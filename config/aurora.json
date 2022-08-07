@@ -1,5 +1,5 @@
 {
-  "minBasisPointsPerTrade": 0,
+  "minBasisPointsPerTrade": 100,
   "routers": [
     { "dex": "trisolaris", "address": "0x2CB45Edb4517d5947aFdE3BEAbF95A582506858B" },
     { "dex": "wannaswap", "address": "0xa3a1ef5ae6561572023363862e238afa84c72ef5" },
