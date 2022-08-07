@@ -2,7 +2,7 @@ import { BigNumber } from 'ethers'
 import { ethers, network } from 'hardhat'
 import { Arb, ERC20 } from '../typechain-types'
 import { INetwork } from '../types/config'
-import { getConfig, makeGoodRoute } from '../utils/config'
+import { getBaseAssetSymbol, getConfig, makeGoodRoute } from '../utils/config'
 import { estimateTxGas, getContract, getEtherPrice } from '../utils/ethers'
 
 const main = async () => {
@@ -40,8 +40,7 @@ const main = async () => {
 
     console.log(`Ether cost in USD: ${etherCostInUsd} USD == ${gasCostInEther} ether * ${etherPriceUsd} USD`)
 
-    const baseAsset = config.baseAssets.find(({ address }) => address.toLowerCase() === token1.toLowerCase())
-    const isWeth = baseAsset?.symbol.toLowerCase() === 'weth'
+    const isWeth = getBaseAssetSymbol(config, token1) === 'weth'
     const costToAdd = isWeth ? Number(gasCostInEther) : etherCostInUsd
 
     if (amtBack.gt(profitTarget.add(costToAdd * 10 ** decimals))) {

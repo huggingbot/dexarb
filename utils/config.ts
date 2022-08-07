@@ -2,6 +2,7 @@ import { strict as assert } from 'assert'
 import { network } from 'hardhat'
 import logger from '../core/logging'
 import { auroraMainnetArbContract, ftmMainnetArbContract } from '../hardhat.config'
+import { Address } from '../types/common'
 import { DualRoute, IConfig, INetwork } from '../types/config'
 
 export const getConfig = async (networkName: INetwork): Promise<IConfig> | never => {
@@ -65,4 +66,9 @@ const assertDualRoute = (route: DualRoute): void => {
   assert(typeof router2 !== 'undefined', `router2 is undefined using index of 1 on ${route}`)
   assert(typeof token1 !== 'undefined', `'token1' is undefined using index of 2 on ${route}`)
   assert(typeof token2 !== 'undefined', `'token2' is undefined using index of 3 on ${route}`)
+}
+
+export const getBaseAssetSymbol = (config: IConfig, token: Address) => {
+  const baseAsset = config.baseAssets.find(({ address }) => address.toLowerCase() === token.toLowerCase())
+  return baseAsset?.symbol.toLowerCase()
 }
