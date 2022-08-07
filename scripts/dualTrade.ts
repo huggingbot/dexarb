@@ -62,7 +62,7 @@ const lookForDualTrade = async (arb: Arb): Promise<void> | never => {
       const err = `Token ${token1} not found in ${Object.keys(balances)}`
       throw new Error(err)
     }
-    if (tradeSize.toNumber() === 0) {
+    if (tradeSize.toString() === '0') {
       const err = `Token ${token1} balance is 0`
       throw new Error(err)
     }
@@ -96,7 +96,7 @@ const logResults = (): void => {
     assert(typeof endBalance !== 'undefined', `'endBalance' is undefined using index of ${address} on ${balances}`)
 
     const diff = endBalance.sub(startBalance)
-    const isZero = startBalance.toNumber() === 0
+    const isZero = startBalance.toString() === '0'
     const basisPoints = isZero ? '0' : diff.mul(10000).div(startBalance).toString()
     logger.info(`# ${symbol}: startBalance=${startBalance}, endBalance=${endBalance}, bps=${basisPoints}`)
   }
