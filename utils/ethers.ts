@@ -1,7 +1,8 @@
-import { ethers } from 'hardhat'
-import { Contract, ContractFactory } from 'ethers'
+import { BigNumber, Contract, ContractFactory } from 'ethers'
 import fs from 'fs'
+import { ethers } from 'hardhat'
 import path from 'path'
+import { etherscanApiKey } from '../hardhat.config'
 import { BASE_DIR } from '../settings'
 import { Address } from '../types/common'
 
@@ -27,4 +28,22 @@ export const getContract = async <T extends Address | undefined = undefined>(
 
   type TReturn = T extends Address ? Contract : ContractFactory
   return (typeof address !== 'undefined' ? iContract.attach(address) : iContract) as TReturn
+}
+
+export const estimateTxGas = async (estimateTxCall: () => Promise<BigNumber>) => {
+  const estimatedGas = await estimateTxCall()
+
+  const { gasPrice } = await ethers.provider.getFeeData()
+  const gasPriceInGwei = ethers.utils.formatUnits(gasPrice ?? 0, 'gwei')
+
+  const gasCost = estimatedGas.mul(gasPrice ?? 0)
+  const gasCostInEther = ethers.utils.formatUnits(gasCost ?? 0, 'ether')
+
+  return { estimatedGas, gasPrice: gasPrice ?? BigNumber.from(0), gasPriceInGwei, gasCost, gasCostInEther }
+}
+
+export const getEtherPrice = async (network = 'homestead') => {
+  const etherscanProvider = new ethers.providers.EtherscanProvider(network, etherscanApiKey)
+  const etherPriceUsd = await etherscanProvider.getEtherPrice()
+  return etherPriceUsd
 }
