@@ -64,7 +64,8 @@ const lookForDualTrade = async (arb: Arb): Promise<void> | never => {
     }
     if (tradeSize.toString() === '0') {
       const err = `Token ${token1} balance is 0`
-      throw new Error(err)
+      logger.warn(err)
+      return
     }
     logger.info(`['${router1}','${router2}','${token1}','${token2}']`)
 
