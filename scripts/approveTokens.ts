@@ -15,29 +15,28 @@ const main = async () => {
 
   for (let i = 0; i < config.routes.length; i++) {
     const [router1, router2, token1, token2] = config.routes[i]
-    const routers = [router1, router2]
-    const tokens = [token1, token2]
+    const approvePair = [
+      [router1, token1],
+      [router2, token2],
+    ]
 
-    for (let j = 0; j < routers.length; j++) {
-      const router = routers[j]
-      for (let k = 0; k < tokens.length; k++) {
-        const token = tokens[k]
-        const assetToken = (await getContract('ERC20', token)) as ERC20
+    for (let j = 0; j < approvePair.length; j++) {
+      const [router, token] = approvePair[j]
+      const assetToken = (await getContract('ERC20', token)) as ERC20
 
-        if (approvedTokens.has(`${token}-${router}`)) continue
+      if (approvedTokens.has(`${token}-${router}`)) continue
+
+      const allowance = await assetToken.allowance(signer.address, router)
+      console.log(`Allowance for token ${token} for router ${router} is ${allowance}`)
+
+      if (allowance.toString() === '0') {
+        const tx = await assetToken.approve(router, ethers.constants.MaxUint256)
+        await tx.wait()
 
         const allowance = await assetToken.allowance(signer.address, router)
-        console.log(`Allowance for token ${token} for router ${router} is ${allowance}`)
-
-        if (allowance.toString() === '0') {
-          const tx = await assetToken.approve(router, ethers.constants.MaxUint256)
-          await tx.wait()
-
-          const allowance = await assetToken.allowance(signer.address, router)
-          console.log(`New allowance for token ${token} for router ${router} is ${allowance}`)
-        }
-        approvedTokens.add(`${token}-${router}`)
+        console.log(`New allowance for token ${token} for router ${router} is ${allowance}`)
       }
+      approvedTokens.add(`${token}-${router}`)
     }
   }
 }
