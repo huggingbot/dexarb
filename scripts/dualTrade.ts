@@ -67,18 +67,21 @@ const lookForDualTrade = async (arb: Arb): Promise<void> | never => {
       logger.warn(err)
       return
     }
-    logger.info(`['${router1}','${router2}','${token1}','${token2}']`)
 
     const amtBack = await arb.estimateDualDexTrade(router1, router2, token1, token2, tradeSize)
     const multiplier = BigNumber.from(config.minBasisPointsPerTrade + 10000)
     const profitTarget = tradeSize.mul(multiplier).div(BigNumber.from(10000))
 
     if (amtBack.gt(profitTarget)) {
+      logger.info(
+        `['${router1}','${router2}','${token1}','${token2}']: amtBack ${amtBack}, profitTarget: ${profitTarget}`
+      )
       const gasCost = await calculateGasCost(arb, targetRoute, tradeSize)
       // Assuming token is a stablecoin or wrapped native token for the addition to make sense
       const totalProfitTarget = profitTarget.add(gasCost)
 
       if (amtBack.gt(totalProfitTarget)) {
+        logger.info(`amtBack: ${amtBack}, totalProfitTarget: ${totalProfitTarget}`)
         await dualTrade(arb, targetRoute, tradeSize)
       }
     }
