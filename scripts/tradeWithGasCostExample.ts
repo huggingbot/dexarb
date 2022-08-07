@@ -1,6 +1,7 @@
 import { BigNumber } from 'ethers'
-import { ethers } from 'hardhat'
+import { ethers, network } from 'hardhat'
 import { Arb, ERC20 } from '../typechain-types'
+import { INetwork } from '../types/config'
 import { getConfig, makeGoodRoute } from '../utils/config'
 import { estimateTxGas, getContract, getEtherPrice } from '../utils/ethers'
 
@@ -9,7 +10,8 @@ const main = async () => {
     const [signer] = await ethers.getSigners()
     console.log(`Owner: ${signer.address}`)
 
-    const config = await getConfig('aurora')
+    const networkName = network.name as INetwork
+    const config = await getConfig(networkName)
 
     const arb = (await getContract('Arb', config.arbContract)) as Arb
 
@@ -18,7 +20,7 @@ const main = async () => {
 
     console.log(`['${router1}','${router2}','${token1}','${token2}']`)
 
-    // Assuming token is a stablecoin
+    // Assuming token is a stablecoin or WETH
     const assetToken = (await getContract('ERC20', token1)) as ERC20
     const decimals = await assetToken.decimals()
     const tradeSize = BigNumber.from(100).mul(BigNumber.from(10).pow(decimals))
@@ -38,7 +40,11 @@ const main = async () => {
 
     console.log(`Ether cost in USD: ${etherCostInUsd} USD == ${gasCostInEther} ether * ${etherPriceUsd} USD`)
 
-    if (amtBack.gt(profitTarget.add(etherCostInUsd * 10 ** decimals))) {
+    const baseAsset = config.baseAssets.find(({ address }) => address.toLowerCase() === token1.toLowerCase())
+    const isWeth = baseAsset?.symbol.toLowerCase() === 'weth'
+    const costToAdd = isWeth ? Number(gasCostInEther) : etherCostInUsd
+
+    if (amtBack.gt(profitTarget.add(costToAdd * 10 ** decimals))) {
       const tx = await arb.connect(signer).dualDexTrade(router1, router2, token1, token2, tradeSize)
       await tx.wait()
     }
