@@ -3,11 +3,11 @@ import { BigNumber } from 'ethers'
 import { network } from 'hardhat'
 import { ON_ERROR_SLEEP_MS } from '../constants'
 import logger from '../core/logging'
-import { Arb } from '../typechain-types'
+import { Arb, ERC20 } from '../typechain-types'
 import { Address } from '../types/common'
 import { DualRoute, IBalance, IConfig, INetwork } from '../types/config'
-import { getConfig, getRandomRoute, makeGoodRoute } from '../utils/config'
-import { getContract, getSigner } from '../utils/ethers'
+import { getBaseAssetSymbol, getConfig, getRandomRoute, makeGoodRoute } from '../utils/config'
+import { estimateTxGas, getContract, getEtherPrice, getSigner } from '../utils/ethers'
 
 const balances: Record<Address, IBalance> = {}
 let config: IConfig
@@ -30,6 +30,28 @@ const dualTrade = async (arb: Arb, route: DualRoute, amount: BigNumber) => {
   }
 }
 
+const calculateGasCost = async (arb: Arb, route: DualRoute, tradeSize: BigNumber): Promise<number> => {
+  const { router1, router2, token1, token2 } = route
+  const estimateTxCall = () => arb.estimateGas.dualDexTrade(router1, router2, token1, token2, tradeSize)
+  const { estimatedGas, gasPriceInGwei, gasCostInEther } = await estimateTxGas(estimateTxCall)
+
+  logger.info('Gas cost in ether', `${gasCostInEther} ether == ${estimatedGas} gas * ${gasPriceInGwei} gwei`)
+
+  const etherPriceUsd = await getEtherPrice()
+  const gasCostInUsd = Number(gasCostInEther) * etherPriceUsd
+
+  logger.info(`Ether cost in USD: ${gasCostInUsd} USD == ${gasCostInEther} ether * ${etherPriceUsd} USD`)
+
+  const isWeth = getBaseAssetSymbol(config, token1) === 'weth'
+  // Use wrapped native token as gas cost if token1 is one, else denominate gas cost in USD assuming token1 is a stablecoin
+  const gasCost = isWeth ? Number(gasCostInEther) : gasCostInUsd
+
+  const assetToken = (await getContract('ERC20', token1)) as ERC20
+  const decimals = await assetToken.decimals()
+
+  return gasCost * 10 ** decimals
+}
+
 const lookForDualTrade = async (arb: Arb): Promise<void> | never => {
   try {
     const targetRoute: DualRoute = config.routes.length > 0 ? getGoodRoute(config) : getRandomRoute(config)
@@ -50,7 +72,11 @@ const lookForDualTrade = async (arb: Arb): Promise<void> | never => {
     const multiplier = BigNumber.from(config.minBasisPointsPerTrade + 10000)
     const profitTarget = tradeSize.mul(multiplier).div(BigNumber.from(10000))
 
-    if (amtBack.gt(profitTarget)) {
+    const gasCost = await calculateGasCost(arb, targetRoute, tradeSize)
+    // Assuming token is a stablecoin or wrapped native token for the addition to make sense
+    const totalProfitTarget = profitTarget.add(gasCost)
+
+    if (amtBack.gt(totalProfitTarget)) {
       await dualTrade(arb, targetRoute, tradeSize)
     }
   } catch (e) {
@@ -83,7 +109,7 @@ const updateResults = async (): Promise<void> => {
 
     for (let i = 0; i < config.baseAssets.length; i++) {
       const asset = config.baseAssets[i]
-      const assetToken = await getContract('ERC20', asset.address)
+      const assetToken = (await getContract('ERC20', asset.address)) as ERC20
       const balance = await assetToken.balanceOf(config.arbContract)
 
       if (initBalance) {
