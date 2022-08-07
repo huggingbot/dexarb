@@ -73,12 +73,14 @@ const lookForDualTrade = async (arb: Arb): Promise<void> | never => {
     const multiplier = BigNumber.from(config.minBasisPointsPerTrade + 10000)
     const profitTarget = tradeSize.mul(multiplier).div(BigNumber.from(10000))
 
-    const gasCost = await calculateGasCost(arb, targetRoute, tradeSize)
-    // Assuming token is a stablecoin or wrapped native token for the addition to make sense
-    const totalProfitTarget = profitTarget.add(gasCost)
+    if (amtBack.gt(profitTarget)) {
+      const gasCost = await calculateGasCost(arb, targetRoute, tradeSize)
+      // Assuming token is a stablecoin or wrapped native token for the addition to make sense
+      const totalProfitTarget = profitTarget.add(gasCost)
 
-    if (amtBack.gt(totalProfitTarget)) {
-      await dualTrade(arb, targetRoute, tradeSize)
+      if (amtBack.gt(totalProfitTarget)) {
+        await dualTrade(arb, targetRoute, tradeSize)
+      }
     }
   } catch (e) {
     logger.error(e)
