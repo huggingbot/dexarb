@@ -11,3 +11,4 @@ artifacts
 
 *audit.json
 dexarb*.log*
+nohup.out
