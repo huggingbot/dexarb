@@ -72,9 +72,8 @@ const lookForDualTrade = async (arb: Arb): Promise<void> | never => {
     const profitTarget = tradeSize.mul(multiplier).div(BigNumber.from(10000))
 
     if (amtBack.gt(profitTarget)) {
-      logger.info(
-        `['${router1}','${router2}','${token1}','${token2}']: amtBack ${amtBack}, profitTarget: ${profitTarget}`
-      )
+      let msg = `['${router1}','${router2}','${token1}','${token2}']: amtBack ${amtBack}, profitTarget: ${profitTarget}`;
+      logger.info(msg)
       const gasCost = await calculateGasCost(arb, targetRoute, tradeSize)
       // Assuming token is a stablecoin or wrapped native token for the addition to make sense
       const totalProfitTarget = profitTarget.add(gasCost)

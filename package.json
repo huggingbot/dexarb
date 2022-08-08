@@ -23,6 +23,7 @@
     "prettier": "^2.7.1"
   },
   "dependencies": {
+    "telegraf": "^4.8.6",
     "winston": "^3.8.1",
     "winston-daily-rotate-file": "^4.7.1"
   },
