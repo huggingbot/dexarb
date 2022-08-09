@@ -120,7 +120,7 @@ const updateResults = async (): Promise<void> => {
       const assetToken = (await getContract('ERC20', asset.address)) as ERC20
       const balance = await assetToken.balanceOf(config.arbContract)
 
-      let msg = `Asset: ${asset} balance: ${balance}`
+      let msg = `Asset: ${asset.symbol} balance: ${balance}`
       logger.info(msg);
       telegramBot.sendMessage(msg);
 
