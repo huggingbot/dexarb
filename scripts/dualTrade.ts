@@ -8,6 +8,7 @@ import { Address } from '../types/common'
 import { DualRoute, IBalance, IConfig, INetwork } from '../types/config'
 import { getBaseAssetSymbol, getConfig, getRandomRoute, makeGoodRoute } from '../utils/config'
 import { estimateTxGas, getContract, getEtherPrice, getSigner } from '../utils/ethers'
+import { telegramBot } from './../core/telegramService'
 
 const balances: Record<Address, IBalance> = {}
 let config: IConfig
@@ -74,12 +75,15 @@ const lookForDualTrade = async (arb: Arb): Promise<void> | never => {
     if (amtBack.gt(profitTarget)) {
       let msg = `['${router1}','${router2}','${token1}','${token2}']: amtBack ${amtBack}, profitTarget: ${profitTarget}`;
       logger.info(msg)
+      telegramBot.sendMessage(msg);
       const gasCost = await calculateGasCost(arb, targetRoute, tradeSize)
       // Assuming token is a stablecoin or wrapped native token for the addition to make sense
       const totalProfitTarget = profitTarget.add(gasCost)
 
       if (amtBack.gt(totalProfitTarget)) {
-        logger.info(`amtBack: ${amtBack}, totalProfitTarget: ${totalProfitTarget}`)
+        let msg = `amtBack: ${amtBack}, totalProfitTarget: ${totalProfitTarget}`;
+        logger.info(msg);
+        telegramBot.sendMessage(msg);
         await dualTrade(arb, targetRoute, tradeSize)
       }
     }
@@ -116,6 +120,10 @@ const updateResults = async (): Promise<void> => {
       const assetToken = (await getContract('ERC20', asset.address)) as ERC20
       const balance = await assetToken.balanceOf(config.arbContract)
 
+      let msg = `Asset: ${asset} balance: ${balance}`
+      logger.info(msg);
+      telegramBot.sendMessage(msg);
+
       if (initBalance) {
         balances[asset.address] = { symbol: asset.symbol, balance, startBalance: balance }
       } else {
@@ -147,6 +155,7 @@ const setup = async (): Promise<Arb> => {
 }
 
 const main = async () => {
+  telegramBot.sendMessage("Service started successfully");
   const arb = await setup()
   while (true) {
     await lookForDualTrade(arb)

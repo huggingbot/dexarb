@@ -1,23 +1,40 @@
 import { Telegraf } from 'telegraf';
 import 'dotenv/config';
+import logger from './logging';
 
-const telegramBot = new Telegraf(process.env.BOT_TOKEN ?? "");
 
-telegramBot.start((ctx) => {
-    console.log("/start is called")
-    ctx.reply('Welcome')
-});
+class TelegramBot {
+    public telegramBot: Telegraf;
 
-telegramBot.help((ctx) => {
-    console.log("/help is called", ctx.update)
-    ctx.reply('Send me a sticker')
-});
+    constructor() {
+        this.telegramBot = new Telegraf(process.env.BOT_TOKEN ?? "");
+        this.initialiseTelegramBot();
+    }
 
-telegramBot.on('sticker', (ctx) => ctx.reply('👍'));
-telegramBot.hears('hi', (ctx) => ctx.reply('Hey there'));
-telegramBot.launch();
+    private initialiseTelegramBot() {
+        this.telegramBot.start((ctx) => {
+            logger.info("/start is called")
+            ctx.reply('Welcome')
+        });
 
-// Enable graceful stop
-process.once('SIGINT', () => telegramBot.stop('SIGINT'))
-process.once('SIGTERM', () => telegramBot.stop('SIGTERM'))
+        this.telegramBot.help((ctx) => {
+            logger.info("/help is called", ctx.update)
+            ctx.reply('Send me a sticker')
+        });
 
+        this.telegramBot.on('sticker', (ctx) => ctx.reply('👍'));
+        this.telegramBot.hears('hi', (ctx) => ctx.reply('Hey there'));
+        this.telegramBot.launch();
+
+        // Enable graceful stop
+        process.once('SIGINT', () => this.telegramBot.stop('SIGINT'));
+        process.once('SIGTERM', () => this.telegramBot.stop('SIGTERM'));
+    }
+
+    public sendMessage(message: string, telegramId = process.env.DEFAULT_TELEGRAM_ID ?? "") {
+        this.telegramBot.telegram.sendMessage(telegramId, message);
+    }
+}
+
+
+export const telegramBot = new TelegramBot;
