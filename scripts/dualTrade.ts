@@ -73,17 +73,17 @@ const lookForDualTrade = async (arb: Arb): Promise<void> | never => {
     const profitTarget = tradeSize.mul(multiplier).div(BigNumber.from(10000))
 
     if (amtBack.gt(profitTarget)) {
-      let msg = `['${router1}','${router2}','${token1}','${token2}']: amtBack ${amtBack}, profitTarget: ${profitTarget}`;
+      let msg = `['${router1}','${router2}','${token1}','${token2}']: amtBack ${amtBack}, profitTarget: ${profitTarget}`
       logger.info(msg)
-      telegramBot.sendMessage(msg);
+      telegramBot.sendMessage(msg)
       const gasCost = await calculateGasCost(arb, targetRoute, tradeSize)
       // Assuming token is a stablecoin or wrapped native token for the addition to make sense
       const totalProfitTarget = profitTarget.add(gasCost)
 
       if (amtBack.gt(totalProfitTarget)) {
-        let msg = `amtBack: ${amtBack}, totalProfitTarget: ${totalProfitTarget}`;
-        logger.info(msg);
-        telegramBot.sendMessage(msg);
+        let msg = `amtBack: ${amtBack}, totalProfitTarget: ${totalProfitTarget}`
+        logger.info(msg)
+        telegramBot.sendMessage(msg)
         await dualTrade(arb, targetRoute, tradeSize)
       }
     }
@@ -121,8 +121,8 @@ const updateResults = async (): Promise<void> => {
       const balance = await assetToken.balanceOf(config.arbContract)
 
       let msg = `Asset: ${asset.symbol} balance: ${balance}`
-      logger.info(msg);
-      telegramBot.sendMessage(msg);
+      logger.info(msg)
+      telegramBot.sendMessage(msg)
 
       if (initBalance) {
         balances[asset.address] = { symbol: asset.symbol, balance, startBalance: balance }
@@ -155,7 +155,7 @@ const setup = async (): Promise<Arb> => {
 }
 
 const main = async () => {
-  telegramBot.sendMessage("Service started successfully");
+  telegramBot.sendMessage('Service started successfully')
   const arb = await setup()
   while (true) {
     await lookForDualTrade(arb)
