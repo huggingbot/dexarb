@@ -1,7 +1,7 @@
 import { strict as assert } from 'assert'
-import { BigNumber } from 'ethers'
-import { network } from 'hardhat'
-import { ON_ERROR_SLEEP_MS } from '../constants'
+import { BigNumber, Overrides, CallOverrides } from 'ethers'
+import { ethers, network } from 'hardhat'
+import { ENONCE_TOO_SMALL, ON_ERROR_SLEEP_MS } from '../constants'
 import logger from '../core/logging'
 import { Arb, ERC20 } from '../typechain-types'
 import { Address } from '../types/common'
@@ -13,22 +13,43 @@ import { telegramBot } from './../core/telegramService'
 const balances: Record<Address, IBalance> = {}
 let config: IConfig
 
+type TOverrides = Omit<Overrides, 'nonce'> & Pick<CallOverrides, 'from'> & { nonce: number }
+
 const getGoodRoute = makeGoodRoute()
 
-const dualTrade = async (arb: Arb, route: DualRoute, amount: BigNumber) => {
+const onDualTradeError = async (
+  error: unknown,
+  arb: Arb,
+  route: DualRoute,
+  amount: BigNumber,
+  overrides?: TOverrides
+): Promise<boolean> => {
+  const errorStr = JSON.stringify(error)
+  if (errorStr.includes(ENONCE_TOO_SMALL)) {
+    const signer = await getSigner(0)
+    const nonce = (overrides?.nonce || (await ethers.provider.getTransactionCount(signer.address))) as number
+    logger.info(`Error: ${ENONCE_TOO_SMALL}. Recalling dualTrade with nonce ${nonce + 1}`)
+    await dualTrade(arb, route, amount, { nonce: nonce + 1 })
+    return true
+  }
+  return false
+}
+
+const dualTrade = async (arb: Arb, route: DualRoute, amount: BigNumber, overrides?: TOverrides) => {
   try {
     const { router1, router2, token1, token2 } = route
 
     logger.info('> Making dualTrade...')
     const signer = await getSigner(0)
-    const tx = await arb.connect(signer).dualDexTrade(router1, router2, token1, token2, amount)
+    const tx = await arb.connect(signer).dualDexTrade(router1, router2, token1, token2, amount, overrides)
     await tx.wait()
     await new Promise((r) => setTimeout(r, 10000))
 
     await updateResults()
     logResults()
   } catch (e) {
-    throw e
+    const isResolved = await onDualTradeError(e, arb, route, amount, overrides)
+    if (!isResolved) throw e
   }
 }
 
