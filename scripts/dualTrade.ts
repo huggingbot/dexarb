@@ -1,5 +1,5 @@
 import { strict as assert } from 'assert'
-import { BigNumber, Overrides, CallOverrides } from 'ethers'
+import { BigNumber, CallOverrides, ContractTransaction, Overrides } from 'ethers'
 import { ethers, network } from 'hardhat'
 import { ENONCE_TOO_SMALL, ON_ERROR_SLEEP_MS } from '../constants'
 import logger from '../core/logging'
@@ -41,7 +41,13 @@ const dualTrade = async (arb: Arb, route: DualRoute, amount: BigNumber, override
 
     logger.info('> Making dualTrade...')
     const signer = await getSigner(0)
-    const tx = await arb.connect(signer).dualDexTrade(router1, router2, token1, token2, amount, overrides)
+
+    let tx: ContractTransaction
+    if (overrides) {
+      tx = await arb.connect(signer).dualDexTrade(router1, router2, token1, token2, amount, overrides)
+    } else {
+      tx = await arb.connect(signer).dualDexTrade(router1, router2, token1, token2, amount)
+    }
     await tx.wait()
     await new Promise((r) => setTimeout(r, 10000))
 
