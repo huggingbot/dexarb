@@ -23,6 +23,7 @@ const dualTrade = async (arb: Arb, route: DualRoute, amount: BigNumber) => {
     const signer = await getSigner(0)
     const tx = await arb.connect(signer).dualDexTrade(router1, router2, token1, token2, amount)
     await tx.wait()
+    await new Promise((r) => setTimeout(r, 10000))
 
     await updateResults()
     logResults()
