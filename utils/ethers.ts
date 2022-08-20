@@ -2,6 +2,7 @@ import { BigNumber, Contract, ContractFactory } from 'ethers'
 import fs from 'fs'
 import { ethers } from 'hardhat'
 import path from 'path'
+import { FAST_GAS_PRICE_PCT } from '../constants'
 import { etherscanApiKey } from '../hardhat.config'
 import { BASE_DIR } from '../settings'
 import { Address } from '../types/common'
@@ -30,16 +31,21 @@ export const getContract = async <T extends Address | undefined = undefined>(
   return (typeof address !== 'undefined' ? iContract.attach(address) : iContract) as TReturn
 }
 
-export const estimateTxGas = async (estimateTxCall: () => Promise<BigNumber>) => {
+export const estimateTxGas = async (
+  estimateTxCall: () => Promise<BigNumber>,
+  priority: 'fast' | 'standard' = 'fast'
+) => {
   const estimatedGas = await estimateTxCall()
 
   const { gasPrice } = await ethers.provider.getFeeData()
-  const gasPriceInGwei = ethers.utils.formatUnits(gasPrice ?? 0, 'gwei')
+  const fastGasPrice = BigNumber.from(Math.floor(gasPrice?.toNumber() ?? 0 * (1 + FAST_GAS_PRICE_PCT)))
+  const adjustedGasPrice = priority === 'fast' ? fastGasPrice : gasPrice ?? BigNumber.from(0)
+  const gasPriceInGwei = ethers.utils.formatUnits(adjustedGasPrice, 'gwei')
 
-  const gasCost = estimatedGas.mul(gasPrice ?? 0)
-  const gasCostInEther = ethers.utils.formatUnits(gasCost ?? 0, 'ether')
+  const gasCost = estimatedGas.mul(adjustedGasPrice)
+  const gasCostInEther = ethers.utils.formatUnits(gasCost, 'ether')
 
-  return { estimatedGas, gasPrice: gasPrice ?? BigNumber.from(0), gasPriceInGwei, gasCost, gasCostInEther }
+  return { estimatedGas, gasPrice: adjustedGasPrice, gasPriceInGwei, gasCost, gasCostInEther }
 }
 
 export const getEtherPrice = async (network = 'homestead') => {
